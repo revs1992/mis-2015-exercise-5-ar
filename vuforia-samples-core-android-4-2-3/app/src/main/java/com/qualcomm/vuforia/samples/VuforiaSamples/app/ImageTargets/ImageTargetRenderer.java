@@ -13,6 +13,7 @@ import java.util.Vector;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import android.media.Image;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
@@ -29,10 +30,12 @@ import com.qualcomm.vuforia.Vuforia;
 import com.qualcomm.vuforia.samples.SampleApplication.SampleApplicationSession;
 import com.qualcomm.vuforia.samples.SampleApplication.utils.CubeShaders;
 import com.qualcomm.vuforia.samples.SampleApplication.utils.LoadingDialogHandler;
+import com.qualcomm.vuforia.samples.SampleApplication.utils.MeshObject;
 import com.qualcomm.vuforia.samples.SampleApplication.utils.SampleApplication3DModel;
 import com.qualcomm.vuforia.samples.SampleApplication.utils.SampleUtils;
 import com.qualcomm.vuforia.samples.SampleApplication.utils.Teapot;
 import com.qualcomm.vuforia.samples.SampleApplication.utils.Texture;
+import com.qualcomm.vuforia.samples.SampleApplication.utils.plane;
 
 
 // The renderer class for the ImageTargets sample. 
@@ -41,6 +44,7 @@ public class ImageTargetRenderer implements GLSurfaceView.Renderer
     private static final String LOGTAG = "ImageTargetRenderer";
     
     private SampleApplicationSession vuforiaAppSession;
+
     private ImageTargets mActivity;
     
     private Vector<Texture> mTextures;
@@ -58,6 +62,10 @@ public class ImageTargetRenderer implements GLSurfaceView.Renderer
     private int texSampler2DHandle;
     
     private Teapot mTeapot;
+
+    private plane mPlane;
+
+    private MeshObject mObject;
     
     private float kBuildingScale = 12.0f;
     private SampleApplication3DModel mBuildingsModel;
@@ -65,8 +73,10 @@ public class ImageTargetRenderer implements GLSurfaceView.Renderer
     private Renderer mRenderer;
     
     boolean mIsActive = false;
+
+    private float OBJECT_SCALE_FLOAT;
     
-    private static final float OBJECT_SCALE_FLOAT = 3.0f;
+   // private static final float OBJECT_SCALE_FLOAT = 5.0f;
     
     
     public ImageTargetRenderer(ImageTargets activity,
@@ -118,6 +128,8 @@ public class ImageTargetRenderer implements GLSurfaceView.Renderer
     private void initRendering()
     {
         mTeapot = new Teapot();
+
+        mPlane  = new plane();
         
         mRenderer = Renderer.getInstance();
         
@@ -152,15 +164,7 @@ public class ImageTargetRenderer implements GLSurfaceView.Renderer
         texSampler2DHandle = GLES20.glGetUniformLocation(shaderProgramID,
             "texSampler2D");
         
-        try
-        {
-            mBuildingsModel = new SampleApplication3DModel();
-            mBuildingsModel.loadModel(mActivity.getResources().getAssets(),
-                "ImageTargets/Buildings.txt");
-        } catch (IOException e)
-        {
-            Log.e(LOGTAG, "Unable to load buildings");
-        }
+
         
         // Hide the Loading Dialog
         mActivity.loadingDialogHandler
@@ -197,12 +201,39 @@ public class ImageTargetRenderer implements GLSurfaceView.Renderer
             Matrix44F modelViewMatrix_Vuforia = Tool
                 .convertPose2GLMatrix(result.getPose());
             float[] modelViewMatrix = modelViewMatrix_Vuforia.getData();
-            
-            int textureIndex = trackable.getName().equalsIgnoreCase("cat") ? 0
-                : 1;
-            textureIndex = trackable.getName().equalsIgnoreCase("city") ? 2
-                : textureIndex;
-            
+            int textureIndex=0;
+
+            if(trackable.getName().equalsIgnoreCase("tree")||trackable.getName().equalsIgnoreCase("city")||trackable.getName().equalsIgnoreCase("cat") ) {
+                textureIndex = trackable.getName().equalsIgnoreCase("tree") ? 0
+                        : textureIndex;
+                textureIndex = trackable.getName().equalsIgnoreCase("city") ? 1
+                        : textureIndex;
+                textureIndex = trackable.getName().equalsIgnoreCase("cat") ? 2
+                        : textureIndex;
+                mObject = mTeapot;
+                OBJECT_SCALE_FLOAT = 3.0f;
+            }
+
+            else {
+                textureIndex = trackable.getName().equalsIgnoreCase("Echtler") ? 4
+                        : textureIndex;
+                textureIndex = trackable.getName().equalsIgnoreCase("eva") ? 7
+                        : 2;
+                textureIndex = trackable.getName().equalsIgnoreCase("Stein") ? 3
+                        : textureIndex;
+                textureIndex = trackable.getName().equalsIgnoreCase("volker") ? 8
+                        : textureIndex;
+                textureIndex = trackable.getName().equalsIgnoreCase("Wuthrich") ? 5
+                        : textureIndex;
+                textureIndex = trackable.getName().equalsIgnoreCase("Bertel") ? 6
+                        : textureIndex;
+
+                mObject = mPlane;
+                OBJECT_SCALE_FLOAT = 90.0f;
+
+            }
+
+
             // deal with the modelview and projection matrices
             float[] modelViewProjection = new float[16];
             
@@ -225,14 +256,13 @@ public class ImageTargetRenderer implements GLSurfaceView.Renderer
             // activate the shader program and bind the vertex/normal/tex coords
             GLES20.glUseProgram(shaderProgramID);
             
-            if (!mActivity.isExtendedTrackingActive())
-            {
+
                 GLES20.glVertexAttribPointer(vertexHandle, 3, GLES20.GL_FLOAT,
-                    false, 0, mTeapot.getVertices());
+                    false, 0, mObject.getVertices());
                 GLES20.glVertexAttribPointer(normalHandle, 3, GLES20.GL_FLOAT,
-                    false, 0, mTeapot.getNormals());
+                    false, 0, mObject.getNormals());
                 GLES20.glVertexAttribPointer(textureCoordHandle, 2,
-                    GLES20.GL_FLOAT, false, 0, mTeapot.getTexCoords());
+                    GLES20.GL_FLOAT, false, 0, mObject.getTexCoords());
                 
                 GLES20.glEnableVertexAttribArray(vertexHandle);
                 GLES20.glEnableVertexAttribArray(normalHandle);
@@ -250,38 +280,14 @@ public class ImageTargetRenderer implements GLSurfaceView.Renderer
                 
                 // finally draw the teapot
                 GLES20.glDrawElements(GLES20.GL_TRIANGLES,
-                    mTeapot.getNumObjectIndex(), GLES20.GL_UNSIGNED_SHORT,
-                    mTeapot.getIndices());
+                        mObject.getNumObjectIndex(), GLES20.GL_UNSIGNED_SHORT,
+                        mObject.getIndices());
                 
                 // disable the enabled arrays
                 GLES20.glDisableVertexAttribArray(vertexHandle);
                 GLES20.glDisableVertexAttribArray(normalHandle);
                 GLES20.glDisableVertexAttribArray(textureCoordHandle);
-            } else
-            {
-                GLES20.glDisable(GLES20.GL_CULL_FACE);
-                GLES20.glVertexAttribPointer(vertexHandle, 3, GLES20.GL_FLOAT,
-                    false, 0, mBuildingsModel.getVertices());
-                GLES20.glVertexAttribPointer(normalHandle, 3, GLES20.GL_FLOAT,
-                    false, 0, mBuildingsModel.getNormals());
-                GLES20.glVertexAttribPointer(textureCoordHandle, 2,
-                    GLES20.GL_FLOAT, false, 0, mBuildingsModel.getTexCoords());
-                
-                GLES20.glEnableVertexAttribArray(vertexHandle);
-                GLES20.glEnableVertexAttribArray(normalHandle);
-                GLES20.glEnableVertexAttribArray(textureCoordHandle);
-                
-                GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-                GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,
-                    mTextures.get(3).mTextureID[0]);
-                GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false,
-                    modelViewProjection, 0);
-                GLES20.glUniform1i(texSampler2DHandle, 0);
-                GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0,
-                    mBuildingsModel.getNumObjectVertex());
-                
-                SampleUtils.checkGLError("Renderer DrawBuildings");
-            }
+
             
             SampleUtils.checkGLError("Render Frame");
             

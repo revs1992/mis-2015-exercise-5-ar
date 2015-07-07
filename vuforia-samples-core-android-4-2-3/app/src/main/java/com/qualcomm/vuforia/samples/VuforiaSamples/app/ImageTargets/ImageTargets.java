@@ -7,17 +7,26 @@ and other countries. Trademarks of QUALCOMM Incorporated are used with permissio
 
 package com.qualcomm.vuforia.samples.VuforiaSamples.app.ImageTargets;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
+import java.util.concurrent.ExecutionException;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -174,11 +183,11 @@ public class ImageTargets extends Activity implements SampleApplicationControl,
             getAssets()));
         mTextures.add(Texture.loadTextureFromApk("TextureTeapotBlue.png",
             getAssets()));
-        mTextures.add(Texture.loadTextureFromApk("ImageTargets/Buildings.jpeg",
-            getAssets()));
+        //mTextures.add(Texture.loadTextureFromApk("ImageTargets/Buildings.jpeg",
+            //getAssets()));
+        addextraTextures(mTextures);
     }
-    
-    
+
     // Called when the activity will start interacting with the user.
     @Override
     protected void onResume()
@@ -209,7 +218,18 @@ public class ImageTargets extends Activity implements SampleApplicationControl,
         }
         
     }
-    
+    private void addextraTextures(Vector<Texture> texture) {
+        webextractor extract = new webextractor();
+        extract.execute("http://www.uni-weimar.de/medien/webis/people/stein.jpg","http://www.uni-weimar.de/uploads/pics/echtler_web.jpg","http://www.uni-weimar.de/uploads/pics/wuethrich_web2_01.jpg","http://www.uni-weimar.de/uploads/pics/bertel_web.jpg",
+                "http://www.uni-weimar.de/uploads/pics/hornecker_web_01.jpg","http://www.uni-weimar.de/uploads/pics/rodehorst_web.jpg" );
+        List<Texture> txters = null;
+        try {
+            txters = extract.get();
+        } catch (ExecutionException e) {
+        } catch (InterruptedException e) {
+        }
+        texture.addAll(txters);
+    }
     
     // Callback for configuration changes the activity handles itself
     @Override
@@ -279,8 +299,24 @@ public class ImageTargets extends Activity implements SampleApplicationControl,
         
         System.gc();
     }
-    
-    
+    private class webextractor extends AsyncTask<String, Void, List<Texture>> {
+
+        protected List<Texture> doInBackground(String... url) {
+            List<Texture> txters = new ArrayList<Texture>();
+            for (String U: url) {
+                try {
+                    Bitmap bmap = BitmapFactory.decodeStream((InputStream) new URL(U).getContent());
+                    int[] buffer = new int[bmap.getWidth() * bmap.getHeight()];
+                    txters.add(Texture.loadTextureFromIntBuffer(buffer, bmap.getWidth(), bmap.getHeight()));
+                } catch (MalformedURLException e) {e.printStackTrace();
+                } catch (IOException e) {e.printStackTrace();
+                } }
+            return txters;
+        }
+
+    }
+
+
     // Initializes AR application components.
     private void initApplicationAR()
     {
@@ -799,4 +835,9 @@ public class ImageTargets extends Activity implements SampleApplicationControl,
     {
         Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
     }
+
+
 }
+
+
+
