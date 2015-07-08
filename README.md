@@ -2,5 +2,10 @@
 
 REVATHI GURUMOORTHI 115314
 
-professor door signs were used.
+
+TASK 2 :
+
+The following Professor room signs were used : Eva Hornecker,Volker Roderhost,
+                                                    Sven BErtel,Florian Echtler,Charles Wuthrich,
+                                                          Benno Stein
 
